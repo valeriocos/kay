@@ -40,9 +40,7 @@ ES_VERIFY_CERTS = False
 
 logger = logging.getLogger(__name__)
 
-
-class ESConnector(Connector):
-    MAPPING_TEMPLATE = """
+MAPPING_TEMPLATE = """
     { 
       "mappings": { 
         "%s": { 
@@ -63,7 +61,7 @@ class ESConnector(Connector):
                 "origin" : {
                     "type" : "keyword"
                 },
-                "perceval_version" : {
+                "%s_version" : {
                     "type" : "keyword"
                 },
                 "tag" : {
@@ -84,7 +82,13 @@ class ESConnector(Connector):
     }
     """
 
-    def __init__(self, url, index, alias=None, item_type=ITEM_TYPE,
+PERCEVAL_MAPPING = 'perceval'
+GALAHAD_MAPPING = 'galahad'
+
+
+class ESConnector(Connector):
+
+    def __init__(self, url, index, alias=None, item_type=ITEM_TYPE, item_mapping=PERCEVAL_MAPPING,
                  timeout=ES_TIMEOUT, max_retries=ES_MAX_RETRIES,
                  retry_on_timeout=ES_RETRY_ON_TIMEOUT, verify_certs=ES_VERIFY_CERTS):
         super().__init__("elasticsearch")
@@ -94,6 +98,7 @@ class ESConnector(Connector):
         self.index = index
         self.alias = alias
         self.item_type = item_type
+        self.item_mapping = item_mapping
 
         self.create_index()
 
@@ -103,7 +108,7 @@ class ESConnector(Connector):
     def create_index(self):
         """Create index if not exists"""
 
-        mapping = json.loads(ESConnector.MAPPING_TEMPLATE % self.item_type)
+        mapping = json.loads(MAPPING_TEMPLATE % (self.item_type, self.item_mapping))
 
         if self.conn.indices.exists(index=self.index):
             logger.warning("Index %s already exists!", self.index)
@@ -190,6 +195,9 @@ class ESConnectorCommand(ConnectorCommand):
         group.add_argument('--items-type', dest='item_type',
                            default=ITEM_TYPE,
                            help="Set the type of items to insert")
+        group.add_argument('--items-mapping', dest='item_mapping',
+                           default=PERCEVAL_MAPPING,
+                           help="Set the mappings of the index")
         group.add_argument('--es-timeout', dest='timeout',
                            default=ES_TIMEOUT,
                            help="Set timeout")
