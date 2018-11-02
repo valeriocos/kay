@@ -136,9 +136,6 @@ class ESConnector(Connector):
             item = await data_queue.get()
 
             if item == Connector.READ_DONE:
-                self.__process_items(items)
-                items.clear()
-                data_queue.task_done()
                 break
 
             items.append(item)
@@ -151,6 +148,8 @@ class ESConnector(Connector):
         if items:
             self.__process_items(items)
             items.clear()
+
+        data_queue.task_done()
 
     def __process_items(self, items):
         digest_items = []
