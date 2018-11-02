@@ -22,24 +22,24 @@
 
 import logging
 
-from kay.messenger import (Messenger,
-                           MessengerCommand,
-                           MessengerCommandArgumentParser)
-from kay.messengers.connectors.redis import (RedisConnector,
-                                             RedisConnectorCommand)
-from kay.messengers.connectors.elasticsearch import (ESConnector,
-                                                     ESConnectorCommand,
-                                                     ITEM_TYPE,
-                                                     ES_TIMEOUT,
-                                                     ES_MAX_RETRIES,
-                                                     ES_RETRY_ON_TIMEOUT,
-                                                     ES_VERIFY_CERTS)
+from kay.backend import (Backend,
+                         BackendCommand,
+                         BackendCommandArgumentParser)
+from kay.backends.connectors.redis import (RedisConnector,
+                                           RedisConnectorCommand)
+from kay.backends.connectors.elasticsearch import (ESConnector,
+                                                   ESConnectorCommand,
+                                                   ITEM_TYPE,
+                                                   ES_TIMEOUT,
+                                                   ES_MAX_RETRIES,
+                                                   ES_RETRY_ON_TIMEOUT,
+                                                   ES_VERIFY_CERTS)
 
 logger = logging.getLogger(__name__)
 
 
-class Redis2Es(Messenger):
-    """Messenger class to transfer data from a redis queue to an ES index."""
+class Redis2Es(Backend):
+    """Backend class to transfer data from a redis queue to an ES index."""
 
     version = '0.1.0'
 
@@ -54,16 +54,16 @@ class Redis2Es(Messenger):
         super().__init__(redis, es)
 
 
-class Redis2EsCommand(MessengerCommand):
-    """Class to run Redis2Es messenger from the command line."""
+class Redis2EsCommand(BackendCommand):
+    """Class to run Redis2Es backend from the command line."""
 
-    MESSENGER = Redis2Es
+    BACKEND = Redis2Es
 
     @staticmethod
     def setup_cmd_parser():
         """Returns the Redis2Es argument parser."""
 
-        parser = MessengerCommandArgumentParser()
+        parser = BackendCommandArgumentParser()
 
         group = parser.parser.add_argument_group('Redis arguments')
         group.add_argument('--redis-url', dest='redis_url', help="Redis URL")

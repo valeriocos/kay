@@ -26,16 +26,16 @@ import logging
 import sys
 
 import kay
-import kay.messenger
-import kay.messengers
+import kay.backend
+import kay.backends
 
 KAY_USAGE_MSG = \
-"""%(prog)s [-g] <messenger> [<args>] | --help | --version"""
+"""%(prog)s [-g] <backend> [<args>] | --help | --version"""
 
 KAY_DESC_MSG = \
 """Assign Sir Kay to transfer data between two data storages.
 
-Transfers are achieved using specific messengers. The most common messengers
+Transfers are achieved using specific backends. The most common backends
 are:
 
     redis2es         Transfer Redis data to ES index
@@ -47,10 +47,10 @@ optional arguments:
 """
 
 KAY_EPILOG_MSG = \
-"""Run '%(prog)s <backend> --help' to get information about a specific messenger."""
+"""Run '%(prog)s <backend> --help' to get information about a specific backend."""
 
 KAY_VERSION_MSG = \
-"""%(prog)s """  + kay.messengers.__version__
+"""%(prog)s """  + kay.backends.__version__
 
 
 # Logging formats
@@ -61,17 +61,17 @@ KAY_DEBUG_LOG_FORMAT = "[%(asctime)s - %(name)s - %(levelname)s] - %(message)s"
 def main():
     args = parse_args()
 
-    _, KAY_CMDS = kay.messenger.find_messengers(kay.messengers)
+    _, KAY_CMDS = kay.backend.find_backends(kay.backends)
 
-    if args.messenger not in KAY_CMDS:
-        raise RuntimeError("Unknown messenger %s" % args.messenger)
+    if args.backend not in KAY_CMDS:
+        raise RuntimeError("Unknown backend %s" % args.backend)
 
     configure_logging(args.debug)
 
     logging.info("Sir Kay is starting to transfer the data.")
 
-    klass = KAY_CMDS[args.messenger]
-    cmd = klass(*args.messenger_args)
+    klass = KAY_CMDS[args.backend]
+    cmd = klass(*args.backend_args)
     cmd.run()
 
     logging.info("Sir Kay completed the transfer.")
@@ -95,8 +95,8 @@ def parse_args():
                         action='store_true',
                         help=argparse.SUPPRESS)
 
-    parser.add_argument('messenger', help=argparse.SUPPRESS)
-    parser.add_argument('messenger_args', nargs=argparse.REMAINDER,
+    parser.add_argument('backend', help=argparse.SUPPRESS)
+    parser.add_argument('backend_args', nargs=argparse.REMAINDER,
                         help=argparse.SUPPRESS)
 
     if len(sys.argv) == 1:

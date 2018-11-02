@@ -22,12 +22,12 @@
 
 
 class BaseError(Exception):
-    """Base class for Messengar exceptions.
+    """Base class for Backend exceptions.
 
     Derived classes can overwrite the error message declaring ``message``
     property.
     """
-    message = 'Messenger base error'
+    message = 'Backend base error'
 
     def __init__(self, **kwargs):
         super().__init__()

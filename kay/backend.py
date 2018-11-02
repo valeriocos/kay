@@ -32,8 +32,8 @@ from grimoirelab_toolkit.introspect import find_signature_parameters
 logger = logging.getLogger(__name__)
 
 
-class Messenger:
-    """Messenger class to transfer data from a source to a target storage.
+class Backend:
+    """Backend class to transfer data from a source to a target storage.
 
     :param source_conn: a Connector object to interact with the source storage
     :param target_conn: a Connector object to interact with the target storage
@@ -74,8 +74,8 @@ class Messenger:
         loop.close()
 
 
-class MessengerCommandArgumentParser:
-    """Manage and parse messenger command arguments."""
+class BackendCommandArgumentParser:
+    """Manage and parse backend command arguments."""
 
     def __init__(self):
         self.parser = argparse.ArgumentParser()
@@ -83,7 +83,7 @@ class MessengerCommandArgumentParser:
     def parse(self, *args):
         """Parse a list of arguments.
 
-        Parse argument strings needed to run a messenger command. The result
+        Parse argument strings needed to run a backend command. The result
         will be a `argparse.Namespace` object populated with the values
         obtained after the validation of the parameters.
 
@@ -96,88 +96,88 @@ class MessengerCommandArgumentParser:
         return parsed_args
 
 
-class MessengerCommand:
-    """Abstract class to run messengers from the command line.
+class BackendCommand:
+    """Abstract class to run backends from the command line.
 
     When the class is initialized, it parses the given arguments using
     the defined argument parser on `setup_cmd_parser` method. Those
     arguments will be stored in the attribute `parsed_args`.
 
-    The arguments will be used to inizialize and run the `Messenger` object
+    The arguments will be used to inizialize and run the `Backend` object
     assigned to this command. The backend used to run the command is stored
-    under `MESSENGER` class attributed. Any class derived from this and must
-    set its own `Messenger` class.
+    under `BACKEND` class attributed. Any class derived from this and must
+    set its own `Backend` class.
 
     Moreover, the method `setup_cmd_parser` must be implemented to exectute
     the backend.
     """
-    MESSENGER = None
+    BACKEND = None
 
     def __init__(self, *args):
         parser = self.setup_cmd_parser()
         self.parsed_args = parser.parse(*args)
 
     def run(self):
-        """Execute messenger.
+        """Execute backend.
 
-        This method runs the messenger to transfer items from a source
+        This method runs the backend to transfer items from a source
         data storage to a target one.
         """
-        messenger_args = vars(self.parsed_args)
-        transfer(self.MESSENGER, messenger_args)
+        backend_args = vars(self.parsed_args)
+        transfer(self.BACKEND, backend_args)
 
     @staticmethod
     def setup_cmd_parser():
         raise NotImplementedError
 
 
-def transfer(messenger_class, messenger_args):
+def transfer(backend_class, backend_args):
     """Transfer items from a data storage to another one.
 
-    :param messenger_class: messenger class to transfer items
-    :param messenger_args: dict of arguments needed to init the messenger
+    :param backend_class: backend class to transfer items
+    :param backend_args: dict of arguments needed to init the backend
     """
-    init_args = find_signature_parameters(messenger_class.__init__,
-                                          messenger_args)
+    init_args = find_signature_parameters(backend_class.__init__,
+                                          backend_args)
 
-    messenger = messenger_class(**init_args)
+    backend = backend_class(**init_args)
 
-    transfer_args = find_signature_parameters(messenger.transfer,
-                                              messenger_args)
-    messenger.transfer(**transfer_args)
+    transfer_args = find_signature_parameters(backend.transfer,
+                                              backend_args)
+    backend.transfer(**transfer_args)
 
 
-def find_messengers(top_package):
-    """Find available messengers.
+def find_backends(top_package):
+    """Find available backends.
 
-    Look for the Kay messengers and commands under `top_package`
+    Look for the Kay backends and commands under `top_package`
     and its sub-packages. When `top_package` defines a namespace,
     backends under that same namespace will be found too.
 
     :param top_package: package storing backends
 
-    :returns: a tuple with two dicts: one with `Messenger` classes and one
-        with `MessengerCommand` classes
+    :returns: a tuple with two dicts: one with `Backend` classes and one
+        with `BackendCommand` classes
     """
     candidates = pkgutil.walk_packages(top_package.__path__,
                                        prefix=top_package.__name__ + '.')
 
     modules = [name for _, name, is_pkg in candidates if not is_pkg]
 
-    return _import_messengers(modules)
+    return _import_backends(modules)
 
 
-def _import_messengers(modules):
+def _import_backends(modules):
     for module in modules:
         importlib.import_module(module)
 
-    mkls = _find_classes(Messenger, modules)
-    ckls = _find_classes(MessengerCommand, modules)
+    bkls = _find_classes(Backend, modules)
+    ckls = _find_classes(BackendCommand, modules)
 
-    messengers = {name: kls for name, kls in mkls}
+    backends = {name: kls for name, kls in bkls}
     commands = {name: klass for name, klass in ckls}
 
-    return messengers, commands
+    return backends, commands
 
 
 def _find_classes(parent, modules):
