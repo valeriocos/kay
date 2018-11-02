@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 KEEP_ALIVE = True
-REST_TIME = 0
+DELAY_TIME = 0
 
 
 class Backend:
@@ -50,11 +50,11 @@ class Backend:
         self.source_conn = source_conn
         self.target_conn = target_conn
 
-    def transfer(self, keep_alive=KEEP_ALIVE, rest=REST_TIME):
+    def transfer(self, keep_alive=KEEP_ALIVE, delay=DELAY_TIME):
         """Transfer the data from the source to the target storages.
 
         :param keep_alive: a flag to keeps listening to the source storage
-        :param rest: the number of seconds to sleep between queue listenings
+        :param delay: the number of seconds to sleep between queue listenings
         """
 
         data_queue = asyncio.Queue()
@@ -68,8 +68,8 @@ class Backend:
                 if not keep_alive:
                     break
 
-                if rest:
-                    time.sleep(rest)
+                if delay:
+                    time.sleep(delay)
 
             except KeyboardInterrupt:
                 if data_queue.qsize() != 0:
@@ -93,8 +93,8 @@ class BackendCommandArgumentParser:
         group.add_argument('--keep-alive', dest='keep_alive',
                            action='store_false',
                            help="Disable continue listening of the source storage")
-        group.add_argument('--rest', dest='rest',
-                           type=int, default=REST_TIME,
+        group.add_argument('--delay', dest='delay',
+                           type=int, default=DELAY_TIME,
                            help="Rest time between queue listenings")
 
     def parse(self, *args):
@@ -110,8 +110,8 @@ class BackendCommandArgumentParser:
         """
         parsed_args = self.parser.parse_args(args)
 
-        if not parsed_args.keep_alive and (parsed_args.rest > 0):
-            raise AttributeError("no keep-alive and rest > 0 parameters are incompatible")
+        if not parsed_args.keep_alive and (parsed_args.delay > 0):
+            raise AttributeError("no keep-alive and delay > 0 parameters are incompatible")
 
         return parsed_args
 
