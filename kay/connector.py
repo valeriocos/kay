@@ -32,3 +32,16 @@ class Connector:
 
     def __init__(self, source):
         self.source = source
+
+
+class ConnectorCommand:
+    """Abstract class to run backends from the command line.
+
+    When the class is initialized, it parses the given arguments using
+    the defined argument parser on `setup_cmd_parser` method. Those
+    arguments will be stored in the attribute `parsed_args`.
+    """
+
+    @staticmethod
+    def setup_cmd_parser(group):
+        raise NotImplementedError

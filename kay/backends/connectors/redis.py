@@ -19,7 +19,6 @@
 # Authors:
 #     Valerio Cosentino <valcos@bitergia.com>
 
-import argparse
 import logging
 import pickle
 
@@ -27,16 +26,17 @@ import redis
 
 from arthur.common import Q_STORAGE_ITEMS
 
-from kay.connector import Connector
+from kay.connector import (Connector,
+                           ConnectorCommand)
 
 logger = logging.getLogger(__name__)
 
 
 class RedisConnector(Connector):
-    def __init__(self, url):
+    def __init__(self, redis_url):
         super().__init__("redis")
-        self.url = url
-        self.conn = redis.StrictRedis.from_url(url)
+        self.url = redis_url
+        self.conn = redis.StrictRedis.from_url(redis_url)
 
     async def read(self, data_queue):
         """Read data from Redis queue"""
@@ -53,18 +53,13 @@ class RedisConnector(Connector):
         await data_queue.put(Connector.READ_DONE)
 
 
-class RedisConnectorCommand:
+class RedisConnectorCommand(ConnectorCommand):
     """Class to initialize RedisConnector from the command line."""
 
     BACKEND = RedisConnector
 
     @staticmethod
-    def setup_cmd_parser():
-        """Returns the RedisConnector argument parser."""
+    def fill_argument_group(group):
+        """Fill the RedisConnector group argument."""
 
-        parser = argparse.ArgumentParser()
-
-        group = parser.add_argument_group('arguments')
-        group.add_argument('--redis-url', dest='url', help="Redis URL")
-
-        return parser
+        group.add_argument('--redis-url', dest='redis_url', help="Redis URL")

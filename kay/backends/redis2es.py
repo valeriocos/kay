@@ -43,13 +43,14 @@ class Redis2Es(Backend):
 
     version = '0.1.0'
 
-    def __init__(self, redis_url, es_url, es_index, alias=None, item_type=ITEM_TYPE,
-                 timeout=ES_TIMEOUT, max_retries=ES_MAX_RETRIES,
-                 retry_on_timeout=ES_RETRY_ON_TIMEOUT, verify_certs=ES_VERIFY_CERTS):
+    def __init__(self, redis_url, es_url, es_index, es_alias=None, es_item_type=ITEM_TYPE,
+                 es_timeout=ES_TIMEOUT, es_max_retries=ES_MAX_RETRIES,
+                 es_retry_on_timeout=ES_RETRY_ON_TIMEOUT, es_verify_certs=ES_VERIFY_CERTS):
 
         redis = RedisConnector(redis_url)
-        es = ESConnector(es_url, es_index, alias=alias, item_type=item_type, timeout=timeout,
-                         max_retries=max_retries, retry_on_timeout=retry_on_timeout, verify_certs=verify_certs)
+        es = ESConnector(es_url, es_index, alias=es_alias, item_type=es_item_type,
+                         timeout=es_timeout, max_retries=es_max_retries,
+                         retry_on_timeout=es_retry_on_timeout, verify_certs=es_verify_certs)
 
         super().__init__(redis, es)
 
@@ -65,30 +66,10 @@ class Redis2EsCommand(BackendCommand):
 
         parser = BackendCommandArgumentParser()
 
-        group = parser.parser.add_argument_group('Redis arguments')
-        group.add_argument('--redis-url', dest='redis_url', help="Redis URL")
+        redis = parser.parser.add_argument_group('Redis arguments')
+        RedisConnectorCommand.fill_argument_group(redis)
 
-        group = parser.parser.add_argument_group('ES arguments')
-        group.add_argument('--index-alias', dest='alias', default='',
-                           help="Assign an alias to the index")
-        group.add_argument('--items-type', dest='item_type',
-                           default=ITEM_TYPE,
-                           help="Set the type of items to insert")
-        group.add_argument('--es-timeout', dest='timeout',
-                           default=ES_TIMEOUT,
-                           help="Set timeout")
-        group.add_argument('--es-max-retries', dest='max_retries',
-                           default=ES_MAX_RETRIES,
-                           help="Set max retries")
-        group.add_argument('--es-no-retry-on-timeout', dest='retry_on_timeout',
-                           default=ES_RETRY_ON_TIMEOUT,
-                           action='store_false',
-                           help="Disable retries on timeout")
-        group.add_argument('--es-verify-certs', dest='verify_certs',
-                           default=ES_VERIFY_CERTS,
-                           action='store_true',
-                           help="Enable verify certs")
-        group.add_argument('--es-url', dest='es_url', help="ES url")
-        group.add_argument('--es-index', dest='es_index', help="target index")
+        es = parser.parser.add_argument_group("ES arguments")
+        ESConnectorCommand.fill_argument_group(es)
 
         return parser

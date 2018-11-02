@@ -24,12 +24,17 @@ import asyncio
 import importlib
 import logging
 import pkgutil
+import time
 
 from kay.connector import Connector
 
 from grimoirelab_toolkit.introspect import find_signature_parameters
 
 logger = logging.getLogger(__name__)
+
+
+KEEP_ALIVE = True
+REST_TIME = 0
 
 
 class Backend:
@@ -45,10 +50,11 @@ class Backend:
         self.source_conn = source_conn
         self.target_conn = target_conn
 
-    def transfer(self, keep_alive=True):
+    def transfer(self, keep_alive=KEEP_ALIVE, rest=REST_TIME):
         """Transfer the data from the source to the target storages.
 
         :param keep_alive: a flag to keeps listening to the source storage
+        :param rest: the number of seconds to sleep between queue listenings
         """
 
         data_queue = asyncio.Queue()
@@ -61,6 +67,9 @@ class Backend:
 
                 if not keep_alive:
                     break
+
+                if rest:
+                    time.sleep(rest)
 
             except KeyboardInterrupt:
                 if data_queue.qsize() != 0:
@@ -80,6 +89,14 @@ class BackendCommandArgumentParser:
     def __init__(self):
         self.parser = argparse.ArgumentParser()
 
+        group = self.parser.add_argument_group('general arguments')
+        group.add_argument('--keep-alive', dest='keep_alive',
+                           action='store_false',
+                           help="Disable continue listening of the source storage")
+        group.add_argument('--rest', dest='rest',
+                           type=int, default=REST_TIME,
+                           help="Rest time between queue listenings")
+
     def parse(self, *args):
         """Parse a list of arguments.
 
@@ -92,6 +109,9 @@ class BackendCommandArgumentParser:
         :result: an object with the parsed values
         """
         parsed_args = self.parser.parse_args(args)
+
+        if not parsed_args.keep_alive and (parsed_args.rest > 0):
+            raise AttributeError("no keep-alive and rest > 0 parameters are incompatible")
 
         return parsed_args
 

@@ -19,7 +19,6 @@
 # Authors:
 #     Valerio Cosentino <valcos@bitergia.com>
 
-import argparse
 import json
 import logging
 import urllib3
@@ -28,7 +27,8 @@ urllib3.disable_warnings()
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers
 
-from kay.connector import Connector
+from kay.connector import (Connector,
+                           ConnectorCommand)
 from kay.errors import ElasticError
 
 ITEM_TYPE = 'items'
@@ -179,15 +179,31 @@ class ESConnector(Connector):
                                      % (self.url, errors[0]))
 
 
-class ESConnectorCommand:
+class ESConnectorCommand(ConnectorCommand):
     """Class to initialize ESConnector from the command line."""
 
     @staticmethod
-    def setup_cmd_parser():
-        """Returns the ESConnector argument parser."""
+    def fill_argument_group(group):
+        """"Fill the ESConnector group parser."""
 
-        parser = argparse.ArgumentParser()
-
-
-
-        return parser
+        group.add_argument('--index-alias', dest='alias', default='',
+                           help="Assign an alias to the index")
+        group.add_argument('--items-type', dest='item_type',
+                           default=ITEM_TYPE,
+                           help="Set the type of items to insert")
+        group.add_argument('--es-timeout', dest='timeout',
+                           default=ES_TIMEOUT,
+                           help="Set timeout")
+        group.add_argument('--es-max-retries', dest='max_retries',
+                           default=ES_MAX_RETRIES,
+                           help="Set max retries")
+        group.add_argument('--es-no-retry-on-timeout', dest='retry_on_timeout',
+                           default=ES_RETRY_ON_TIMEOUT,
+                           action='store_false',
+                           help="Disable retries on timeout")
+        group.add_argument('--es-verify-certs', dest='verify_certs',
+                           default=ES_VERIFY_CERTS,
+                           action='store_true',
+                           help="Enable verify certs")
+        group.add_argument('--es-url', dest='es_url', help="ES url")
+        group.add_argument('--es-index', dest='es_index', help="target index")
