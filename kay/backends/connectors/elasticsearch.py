@@ -31,7 +31,7 @@ from kay.connector import (Connector,
                            ConnectorCommand)
 from kay.errors import ElasticError
 
-ITEM_TYPE = 'items'
+ITEMS_TYPE = 'items'
 ES_BULK_SIZE = 100
 ES_TIMEOUT = 3600
 ES_MAX_RETRIES = 50
@@ -40,7 +40,18 @@ ES_VERIFY_CERTS = False
 
 logger = logging.getLogger(__name__)
 
-MAPPING_TEMPLATE = """
+DEFAULT_MAPPING = """
+    { 
+      "mappings": { 
+        "%s": { 
+            "dynamic": false,
+            "properties": {}
+        }
+      }
+    }
+    """
+
+PERCEVAL_MAPPING = """
     { 
       "mappings": { 
         "%s": { 
@@ -61,7 +72,7 @@ MAPPING_TEMPLATE = """
                 "origin" : {
                     "type" : "keyword"
                 },
-                "%s_version" : {
+                "perceval_version" : {
                     "type" : "keyword"
                 },
                 "tag" : {
@@ -82,13 +93,58 @@ MAPPING_TEMPLATE = """
     }
     """
 
-PERCEVAL_MAPPING = 'perceval'
-GALAHAD_MAPPING = 'galahad'
+GALAHAD_MAPPING = """
+    { 
+      "mappings": { 
+        "%s": { 
+            "dynamic": false,
+            "properties": {
+                "backend_name" : {
+                    "type" : "keyword"
+                },
+                "backend_version" : {
+                    "type" : "keyword"
+                },
+                "category" : {
+                    "type" : "keyword"
+                },
+                "data" : {
+                    "properties":{}
+                },
+                "origin" : {
+                    "type" : "keyword"
+                },
+                "galahad_version" : {
+                    "type" : "keyword"
+                },
+                "tag" : {
+                    "type" : "keyword"
+                },
+                "timestamp" : {
+                    "type" : "long"
+                },
+                "updated_on" : {
+                    "type" : "long"
+                },
+                "uuid" : {
+                    "type" : "keyword"
+                },
+                "perceval_uuid" : {
+                    "type" : "keyword"
+                }
+            }
+        }
+      }
+    }
+    """
+
+PERCEVAL = 'perceval'
+GALAHAD = 'galahad'
 
 
 class ESConnector(Connector):
 
-    def __init__(self, url, index, alias=None, item_type=ITEM_TYPE, item_mapping=PERCEVAL_MAPPING,
+    def __init__(self, url, index, alias=None, items_type=ITEMS_TYPE, items_mapping=PERCEVAL,
                  timeout=ES_TIMEOUT, max_retries=ES_MAX_RETRIES,
                  retry_on_timeout=ES_RETRY_ON_TIMEOUT, verify_certs=ES_VERIFY_CERTS):
         super().__init__("elasticsearch")
@@ -97,8 +153,15 @@ class ESConnector(Connector):
         self.url = url
         self.index = index
         self.alias = alias
-        self.item_type = item_type
-        self.item_mapping = item_mapping
+        self.items_type = items_type
+
+        if items_mapping == PERCEVAL:
+            self.items_mapping = PERCEVAL_MAPPING
+        elif items_mapping == GALAHAD:
+            self.items_mapping = GALAHAD_MAPPING
+        else:
+            self.items_mapping = DEFAULT_MAPPING
+            logger.warning("Items mapping unknown, setting default mapping")
 
         self.create_index()
 
@@ -108,7 +171,7 @@ class ESConnector(Connector):
     def create_index(self):
         """Create index if not exists"""
 
-        mapping = json.loads(MAPPING_TEMPLATE % (self.item_type, self.item_mapping))
+        mapping = json.loads(self.items_mapping % self.items_type)
 
         if self.conn.indices.exists(index=self.index):
             logger.warning("Index %s already exists!", self.index)
@@ -162,7 +225,7 @@ class ESConnector(Connector):
         for item in items:
             es_item = {
                 '_index': self.index,
-                '_type': self.item_type,
+                '_type': self.items_type,
                 '_id': item['uuid'],
                 '_source': item
             }
@@ -192,11 +255,11 @@ class ESConnectorCommand(ConnectorCommand):
 
         group.add_argument('--index-alias', dest='alias', default='',
                            help="Assign an alias to the index")
-        group.add_argument('--items-type', dest='item_type',
-                           default=ITEM_TYPE,
+        group.add_argument('--items-type', dest='items_type',
+                           default=ITEMS_TYPE,
                            help="Set the type of items to insert")
-        group.add_argument('--items-mapping', dest='item_mapping',
-                           default=PERCEVAL_MAPPING,
+        group.add_argument('--items-mapping', dest='items_mapping',
+                           default=PERCEVAL,
                            help="Set the mappings of the index")
         group.add_argument('--es-timeout', dest='timeout',
                            default=ES_TIMEOUT,

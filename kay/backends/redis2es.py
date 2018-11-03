@@ -29,7 +29,8 @@ from kay.backends.connectors.redis import (RedisConnector,
                                            RedisConnectorCommand)
 from kay.backends.connectors.elasticsearch import (ESConnector,
                                                    ESConnectorCommand,
-                                                   ITEM_TYPE,
+                                                   ITEMS_TYPE,
+                                                   PERCEVAL,
                                                    ES_TIMEOUT,
                                                    ES_MAX_RETRIES,
                                                    ES_RETRY_ON_TIMEOUT,
@@ -43,12 +44,14 @@ class Redis2Es(Backend):
 
     version = '0.1.0'
 
-    def __init__(self, redis_url, es_url, es_index, es_alias=None, es_item_type=ITEM_TYPE,
+    def __init__(self, redis_url, es_url, es_index, es_alias=None,
+                 es_items_type=ITEMS_TYPE, es_items_mapping=PERCEVAL,
                  es_timeout=ES_TIMEOUT, es_max_retries=ES_MAX_RETRIES,
                  es_retry_on_timeout=ES_RETRY_ON_TIMEOUT, es_verify_certs=ES_VERIFY_CERTS):
 
         redis = RedisConnector(redis_url)
-        es = ESConnector(es_url, es_index, alias=es_alias, item_type=es_item_type,
+        es = ESConnector(es_url, es_index, alias=es_alias,
+                         items_type=es_items_type, items_mapping=es_items_mapping,
                          timeout=es_timeout, max_retries=es_max_retries,
                          retry_on_timeout=es_retry_on_timeout, verify_certs=es_verify_certs)
 
