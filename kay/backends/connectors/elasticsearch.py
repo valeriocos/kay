@@ -27,11 +27,12 @@ urllib3.disable_warnings()
 from elasticsearch import Elasticsearch
 from elasticsearch import helpers
 
+from grimoirelab_toolkit.datetime import (datetime_utcnow,
+                                          datetime_to_str)
 from kay.connector import (Connector,
                            ConnectorCommand)
 from kay.errors import ElasticError
 
-ITEMS_TYPE = 'items'
 ES_BULK_SIZE = 100
 ES_TIMEOUT = 3600
 ES_MAX_RETRIES = 50
@@ -138,35 +139,82 @@ GALAHAD_MAPPING = """
     }
     """
 
-PERCEVAL = 'perceval'
-GALAHAD = 'galahad'
+GRAAL_MAPPING = """
+    { 
+      "mappings": { 
+        "items": { 
+            "dynamic": false,
+            "properties": {
+                "backend_name" : {
+                    "type" : "keyword"
+                },
+                "backend_version" : {
+                    "type" : "keyword"
+                },
+                "category" : {
+                    "type" : "keyword"
+                },
+                "data" : {
+                    "properties":{}
+                },
+                "origin" : {
+                    "type" : "keyword"
+                },
+                "graal_version" : {
+                    "type" : "keyword"
+                },
+                "tag" : {
+                    "type" : "keyword"
+                },
+                "timestamp" : {
+                    "type" : "long"
+                },
+                "updated_on" : {
+                    "type" : "long"
+                },
+                "uuid" : {
+                    "type" : "keyword"
+                }
+            }
+        }
+      }
+    }
+    """
+
+PERCEVAL_TYPE = 'perceval'
+GALAHAD_TYPE = 'galahad'
+GRAAL_TYPE = 'graal'
+
+SUPPORTED_MAPPINGS = {
+    PERCEVAL_TYPE: PERCEVAL_MAPPING,
+    GALAHAD_TYPE: GALAHAD_MAPPING,
+    GRAAL_TYPE: GRAAL_MAPPING
+}
+
+ALIAS_RAW = 'raw-items'
+ALIAS_ENRICH = 'enrich-items'
 
 
 class ESConnector(Connector):
 
-    def __init__(self, url, index, alias=None, items_type=ITEMS_TYPE, items_mapping=PERCEVAL,
-                 timeout=ES_TIMEOUT, max_retries=ES_MAX_RETRIES,
-                 retry_on_timeout=ES_RETRY_ON_TIMEOUT, verify_certs=ES_VERIFY_CERTS):
+    def __init__(self, es_url, es_items_type, es_index=None, es_index_alias=None,
+                 es_timeout=ES_TIMEOUT, es_max_retries=ES_MAX_RETRIES,
+                 es_retry_on_timeout=ES_RETRY_ON_TIMEOUT, es_verify_certs=ES_VERIFY_CERTS):
         super().__init__("elasticsearch")
-        self.conn = Elasticsearch([url], timeout=timeout, max_retries=max_retries,
-                                  retry_on_timeout=retry_on_timeout, verify_certs=verify_certs)
-        self.url = url
-        self.index = index
-        self.alias = alias
-        self.items_type = items_type
+        self.conn = Elasticsearch([es_url], timeout=es_timeout, max_retries=es_max_retries,
+                                  retry_on_timeout=es_retry_on_timeout, verify_certs=es_verify_certs)
+        self.url = es_url
+        self.items_type = es_items_type
+        self.index = es_index if es_index else self.get_index(es_items_type)
+        self.alias = es_index_alias if es_index_alias else self.get_alias(es_items_type)
 
-        if items_mapping == PERCEVAL:
-            self.items_mapping = PERCEVAL_MAPPING
-        elif items_mapping == GALAHAD:
-            self.items_mapping = GALAHAD_MAPPING
-        else:
-            self.items_mapping = DEFAULT_MAPPING
-            logger.warning("Items mapping unknown, setting default mapping")
+        if es_items_type not in SUPPORTED_MAPPINGS.keys():
+            logger.warning("Items mapping %s unknown, setting default mapping", es_items_type)
+
+        self.items_mapping = SUPPORTED_MAPPINGS[es_items_type]
 
         self.create_index()
-
-        if self.alias:
-            self.create_alias()
+        self.create_alias()
 
     def create_index(self):
         """Create index if not exists"""
@@ -194,7 +242,7 @@ class ESConnector(Connector):
         )
 
         if not res['acknowledged']:
-            raise ElasticError(cause="Index not created")
+            raise ElasticError(cause="Alias not created")
 
     async def write(self, data_queue):
         """Write data to ElasticSearch"""
@@ -218,6 +266,20 @@ class ESConnector(Connector):
             items.clear()
 
         data_queue.task_done()
+
+    @staticmethod
+    def get_index(items_type):
+        current_time = datetime_utcnow()
+        str_time = datetime_to_str(current_time, '%Y%m%d%H%M%S')
+
+        return ESConnector.get_alias(items_type) + '_' + str_time
+
+    @staticmethod
+    def get_alias(items_type):
+        if items_type in [PERCEVAL_TYPE, GRAAL_TYPE]:
+            return ALIAS_RAW
+        else:
+            return ALIAS_ENRICH
 
     def __process_items(self, items):
         digest_items = []
@@ -253,27 +315,25 @@ class ESConnectorCommand(ConnectorCommand):
     def fill_argument_group(group):
         """"Fill the ESConnector group parser."""
 
-        group.add_argument('--index-alias', dest='alias', default='',
+        group.add_argument('--es-index', dest='es_index', default='',
+                           help="Target index")
+        group.add_argument('--es-index-alias', dest='es_index_alias', default='',
                            help="Assign an alias to the index")
-        group.add_argument('--items-type', dest='items_type',
-                           default=ITEMS_TYPE,
-                           help="Set the type of items to insert")
-        group.add_argument('--items-mapping', dest='items_mapping',
-                           default=PERCEVAL,
-                           help="Set the mappings of the index")
-        group.add_argument('--es-timeout', dest='timeout',
+        group.add_argument('--es-timeout', dest='es_timeout',
                            default=ES_TIMEOUT,
                            help="Set timeout")
-        group.add_argument('--es-max-retries', dest='max_retries',
+        group.add_argument('--es-max-retries', dest='es_max_retries',
                            default=ES_MAX_RETRIES,
                            help="Set max retries")
-        group.add_argument('--es-no-retry-on-timeout', dest='retry_on_timeout',
+        group.add_argument('--es-no-retry-on-timeout', dest='es_retry_on_timeout',
                            default=ES_RETRY_ON_TIMEOUT,
                            action='store_false',
                            help="Disable retries on timeout")
-        group.add_argument('--es-verify-certs', dest='verify_certs',
+        group.add_argument('--es-verify-certs', dest='es_verify_certs',
                            default=ES_VERIFY_CERTS,
                            action='store_true',
                            help="Enable verify certs")
         group.add_argument('--es-url', dest='es_url', help="ES url")
-        group.add_argument('--es-index', dest='es_index', help="target index")
+        group.add_argument('--es-items-type', dest='es_items_type',
+                           choices=[PERCEVAL_TYPE, GRAAL_TYPE, GALAHAD_TYPE],
+                           help="Set the type of items to insert")

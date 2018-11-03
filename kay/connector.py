@@ -43,5 +43,5 @@ class ConnectorCommand:
     """
 
     @staticmethod
-    def setup_cmd_parser(group):
+    def fill_argument_group(group):
         raise NotImplementedError
