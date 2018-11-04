@@ -219,7 +219,7 @@ class ESConnector(Connector):
     def create_index(self):
         """Create index if not exists"""
 
-        mapping = json.loads(self.items_mapping % self.items_type)
+        mapping = json.loads(self.items_mapping)
 
         if self.conn.indices.exists(index=self.index):
             logger.warning("Index %s already exists!", self.index)
