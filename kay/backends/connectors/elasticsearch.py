@@ -55,7 +55,7 @@ DEFAULT_MAPPING = """
 PERCEVAL_MAPPING = """
     { 
       "mappings": { 
-        "%s": { 
+        "items": { 
             "dynamic": false,
             "properties": {
                 "backend_name" : {
@@ -97,7 +97,7 @@ PERCEVAL_MAPPING = """
 GALAHAD_MAPPING = """
     { 
       "mappings": { 
-        "%s": { 
+        "items": { 
             "dynamic": false,
             "properties": {
                 "backend_name" : {
@@ -270,7 +270,7 @@ class ESConnector(Connector):
     @staticmethod
     def get_index(items_type):
         current_time = datetime_utcnow()
-        str_time = datetime_to_str(current_time, '%Y%m%d%H%M%S')
+        str_time = datetime_to_str(current_time, '%Y%m%d')
 
         return ESConnector.get_alias(items_type) + '_' + str_time
 
@@ -287,7 +287,7 @@ class ESConnector(Connector):
         for item in items:
             es_item = {
                 '_index': self.index,
-                '_type': self.items_type,
+                '_type': 'items',
                 '_id': item['uuid'],
                 '_source': item
             }
